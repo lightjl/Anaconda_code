@@ -6,6 +6,9 @@ from pathlib import Path
 import time
 import numpy as np
 import Stock_Base
+from importlib import reload
+
+reload(Stock_Base)
 
 class MyStock(Stock_Base.Stock_Base):
     def __init__(self, yearEnd = dt.now().year):
@@ -14,6 +17,16 @@ class MyStock(Stock_Base.Stock_Base):
         self.__initDfs()
         self.__initDfsGrowth()
         self.__initDfsReport()
+
+    def YearEnd(self):
+        return self.__yearEnd
+
+    def ChangeYearEnd(self, yearEnd):
+        if (int(yearEnd) != self.__yearEnd):
+            self.__yearEnd = int(yearEnd)
+            self.__initDfs()
+            self.__initDfsGrowth()
+            self.__initDfsReport()
 
     def __initDfs(self):
         self.dfs = {'profit':{}, 'report':{}, 'growth':{}}
@@ -48,13 +61,14 @@ class MyStock(Stock_Base.Stock_Base):
 
     def research(self):
         dfs_growth      = self.dfs_growth
-        self.stockGDF   = dfs_growth[((np.isnan(dfs_growth.nprg4) & (dfs_growth.nprg0>25)) | (dfs_growth.nprg4>25))  &(dfs_growth.nprg1>25)\
-                            &(dfs_growth.nprg2>25)&(dfs_growth.nprg3>25)]    # 近4年nprg净利润增长率>25
+        self.stockGDF   = dfs_growth[((np.isnan(dfs_growth.nprg4) & (dfs_growth.nprg0>25)) | (~np.isnan(dfs_growth.nprg4) & (dfs_growth.nprg4>25))) \
+                                     &(dfs_growth.nprg1>25) &(dfs_growth.nprg2>25)&(dfs_growth.nprg3>25)]    # 近4年nprg净利润增长率>25
         self.stockGDF   = self.stockGDF.merge(self.dfs_report, on='code', how='left')
         self.stockGDF['nprg'] \
                         = self.stockGDF.apply(lambda x: x['nprg3'] if pd.isnull(x['nprg4']) else x['nprg4'], axis=1)
+
         self.stockGDF['pe_report_date'] \
-                        = self.stockGDF.apply(lambda x: self.pe(x['code'], x['rec_report_date']), axis=1)
+                        = self.stockGDF.apply(lambda x: self.pe(x['code'], self.nextDay(x['rec_report_date'])), axis=1)
         self.stockGDF['peg_report_date'] \
                         = round(self.stockGDF['pe_report_date']/self.stockGDF['nprg'],2)
         self.stockGDF['price_report_date'] \
@@ -65,10 +79,31 @@ class MyStock(Stock_Base.Stock_Base):
                             self.price_after_report(x['rec_report_date'], x['code'], index=-1), axis=1)
         self.stockGDF['涨幅'] \
                         = (self.stockGDF['price_now'] - self.stockGDF['price_report_date']) / self.stockGDF['price_report_date']
-print('test')
+        self.stockGDF = self.stockGDF.merge(self.basics_df()[['pe']], left_on='code', right_index=True)
+        self.stockGDF['peg'] \
+                        = round(self.stockGDF['pe']/self.stockGDF['nprg'],2)
+
+    def BackTesting(self, dateDT):
+        date = dateDT.strftime('%Y-%m-%d')
+        yearThen = dateDT.strftime('%Y')
+        self.ChangeYearEnd(yearThen)
+        self.stock = self.dfs_growth.merge(self.dfs_report, on='code')
+        self.universe = \
+            self.stock[['code', 'name0', 'rec_report_date'] + ['nprg' + str(i) for i in range(5)] + ['eps3', 'eps4']] \
+                 [
+                (( (self.stock.rec_report_date > date) | (self.stock.rec_report_date.str[0:4] < yearThen) ) & (self.stock.nprg0 > 25) |  # 上年年报未出 注意是否同一年
+                 ((self.stock.rec_report_date <= date) & (self.stock.rec_report_date.str[0:4] == yearThen) & (self.stock.nprg4 > 25)))  # 上年年报已出
+                & (self.stock.nprg1 > 25) & (self.stock.nprg2 > 25) & (self.stock.nprg3 > 25)
+                ]
+        # print(len(self.universe))
+        Report4OrNot = lambda reportDate, date: (reportDate <= date) and (reportDate[0:4] == date[0:4])
+        self.universe['nprg_ondate'] = self.universe.apply(lambda x: x['nprg4'] if (Report4OrNot(x['rec_report_date'], date)) else x['nprg3'], axis=1)
+        self.universe['eps_ondate'] = self.universe.apply(lambda x: x['eps4'] if (Report4OrNot(x['rec_report_date'], date)) else x['eps3'], axis=1)
+
 if __name__ == '__main__':
     test = MyStock()
-    test.research()
-    test.stockGDF[['code', 'peg_report_date', 'pe_report_date', 'eps', 'nprg', 'price_now', 'rec_report_date',
-                   'price_report_date', '涨幅']
-                  + ['nprg' + str(i) for i in range(5)]][test.stockGDF.peg_report_date < 0.4].describe()
+    print(test.basics_df())
+    #test.research()
+    #test.stockGDF[['code', 'peg_report_date', 'pe_report_date', 'eps', 'nprg', 'price_now', 'rec_report_date',
+                  #  'price_report_date', '涨幅']
+                  # + ['nprg' + str(i) for i in range(5)]][test.stockGDF.peg_report_date < 0.4].describe()
