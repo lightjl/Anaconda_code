@@ -25,9 +25,10 @@ class MyStock(Stock_Base.Stock_Base):
     def ChangeYearEnd(self, yearEnd):
         if (int(yearEnd) != self.__yearEnd):
             self.__yearEnd = int(yearEnd)
-            self.__initDfs()
-            self.__initDfsGrowth()
-            self.__initDfsReport()
+            self.__initYJBB()
+#             self.__initDfs()
+#             self.__initDfsGrowth()
+#             self.__initDfsReport()
 
     def __initYJBB(self):
         self.yjbb = {}
@@ -103,7 +104,7 @@ class MyStock(Stock_Base.Stock_Base):
         self.stockGDF.loc[:,('peg')] \
                         = round(self.stockGDF['pe']/self.stockGDF['SJLTZ'],2)
 
-    def research(self):
+    def research(self):  #废弃
         dfs_growth      = self.dfs_growth
         self.stockGDF   = dfs_growth[((np.isnan(dfs_growth.nprg4) & (dfs_growth.nprg0>25)) | (~np.isnan(dfs_growth.nprg4) & (dfs_growth.nprg4>25))) \
                                      &(dfs_growth.nprg1>25) &(dfs_growth.nprg2>25)&(dfs_growth.nprg3>25)]    # 近4年nprg净利润增长率>25
@@ -131,18 +132,18 @@ class MyStock(Stock_Base.Stock_Base):
         date = dateDT.strftime('%Y-%m-%d')
         yearThen = dateDT.strftime('%Y')
         self.ChangeYearEnd(yearThen)
-        self.stock = self.dfs_growth.merge(self.dfs_report, on='code')
+        self.stock = self.yjbbs
         self.universe = \
-            self.stock[['code', 'name0', 'rec_report_date'] + ['nprg' + str(i) for i in range(5)] + ['eps3', 'eps4']] \
+            self.stock[['SECUCODE', 'SECUNAME3', 'rec_report_date'] + ['SJLTZ' + str(i) for i in range(5)] + ['EPSJB3', 'EPSJB4']] \
                  [
-                (( (self.stock.rec_report_date > date) | (self.stock.rec_report_date.str[0:4] < yearThen) ) & (self.stock.nprg0 > 25) |  # 上年年报未出 注意是否同一年
-                 ((self.stock.rec_report_date <= date) & (self.stock.rec_report_date.str[0:4] == yearThen) & (self.stock.nprg4 > 25)))  # 上年年报已出
-                & (self.stock.nprg1 > 25) & (self.stock.nprg2 > 25) & (self.stock.nprg3 > 25)
+                (( (self.stock.rec_report_date > date) | (self.stock.rec_report_date.str[0:4] < yearThen) ) & (self.stock.SJLTZ0 > 25) |  # 上年年报未出 注意是否同一年
+                 ((self.stock.rec_report_date <= date) & (self.stock.rec_report_date.str[0:4] == yearThen) & (self.stock.SJLTZ4 > 25)))  # 上年年报已出
+                & (self.stock.SJLTZ1 > 25) & (self.stock.SJLTZ2 > 25) & (self.stock.SJLTZ3 > 25)
                 ]
         # print(len(self.universe))
         Report4OrNot = lambda reportDate, date: (reportDate <= date) and (reportDate[0:4] == date[0:4])
-        self.universe['nprg_ondate'] = self.universe.apply(lambda x: x['nprg4'] if (Report4OrNot(x['rec_report_date'], date)) else x['nprg3'], axis=1)
-        self.universe['eps_ondate'] = self.universe.apply(lambda x: x['eps4'] if (Report4OrNot(x['rec_report_date'], date)) else x['eps3'], axis=1)
+        self.universe['nprg_ondate'] = self.universe.apply(lambda x: x['SJLTZ4'] if (Report4OrNot(x['rec_report_date'], date)) else x['SJLTZ3'], axis=1)
+        self.universe['eps_ondate'] = self.universe.apply(lambda x: x['EPSJB4'] if (Report4OrNot(x['rec_report_date'], date)) else x['EPSJB3'], axis=1)
 
 if __name__ == '__main__':
     test = MyStock()
