@@ -14,9 +14,10 @@ class MyStock(Stock_Base.Stock_Base):
     def __init__(self, yearEnd = dt.now().year):
         Stock_Base.Stock_Base.__init__(self)
         self.__yearEnd = yearEnd
-        self.__initDfs()
-        self.__initDfsGrowth()
-        self.__initDfsReport()
+        self.__initYJBB()
+#         self.__initDfs()
+#         self.__initDfsGrowth()
+#         self.__initDfsReport()
 
     def YearEnd(self):
         return self.__yearEnd
@@ -27,6 +28,21 @@ class MyStock(Stock_Base.Stock_Base):
             self.__initDfs()
             self.__initDfsGrowth()
             self.__initDfsReport()
+
+    def __initYJBB(self):
+        self.yjbb = {}
+        for y in range(self.__yearEnd - 5, self.__yearEnd):
+            dftmp = self.get_yjbb_df(y)
+            dftmp['SJLTZ'] = dftmp.apply(lambda x: np.NaN if x['SJLTZ'] == '-' else float(x['SJLTZ']), axis=1)
+            dftmp['NOTICEDATE'] = dftmp.apply(lambda x: x['NOTICEDATE'].split('T')[0] , axis=1)
+            self.yjbb[y] = dftmp.rename(
+                    columns={i: i + str(y - self.__yearEnd + 5) for i in dftmp.columns if i not in {'SECUCODE'}})
+        self.yjbbs = pd.DataFrame(columns=['SECUCODE'])
+        for i in range(self.__yearEnd-5, self.__yearEnd):
+            self.yjbbs = self.yjbbs.merge(self.yjbb[i], on=['SECUCODE'], how='outer')
+
+        self.yjbbs['rec_report_date'] = self.yjbbs.apply(
+            lambda x:  x['NOTICEDATE3'] if pd.isnull(x['NOTICEDATE4']) else x['NOTICEDATE4'], axis=1)
 
     def __initDfs(self):
         self.dfs = {'profit':{}, 'report':{}, 'growth':{}}
@@ -58,6 +74,34 @@ class MyStock(Stock_Base.Stock_Base):
         if code not in self.basics_df(date).index:
             return np.NaN
         return self.basics_df(date).loc[code, 'pe']
+
+    def watch(self):
+        #     SJLTZ  净利润	同比增长(%)
+        yjbbs = self.yjbbs
+        self.stockGDF = self.yjbbs[((np.isnan(yjbbs.SJLTZ4) & (yjbbs.SJLTZ0>25)) | (~np.isnan(yjbbs.SJLTZ4) & (yjbbs.SJLTZ4>25))) \
+                                     &(yjbbs.SJLTZ1>25) &(yjbbs.SJLTZ2>25)&(yjbbs.SJLTZ3>25)] # 近4年SJLTZ净利润同比增长率>25
+        self.stockGDF.loc[:,('SJLTZ')] \
+                        = self.stockGDF.apply(lambda x: x['SJLTZ3'] if pd.isnull(x['SJLTZ4']) else x['nprg4'], axis=1)
+
+        self.stockGDF.loc[:,('pe_report_date')] \
+                        = self.stockGDF.apply(lambda x: self.pe(x['SECUCODE'], self.nextDay(x['rec_report_date'])), axis=1)
+
+        self.stockGDF.loc[:,('eps_ondate')] = self.stockGDF.apply(lambda x: x['EPSJB3'] if (pd.isnull(x['EPSJB4'])) else x['EPSJB4'], axis=1)
+
+        self.stockGDF.loc[:,('peg_report_date')] \
+                        = round(self.stockGDF['pe_report_date']/self.stockGDF['SJLTZ'],2)
+
+        self.stockGDF.loc[:,('price_report_date')] \
+                        = self.stockGDF.apply(lambda x: \
+                            self.price_after_report(x['rec_report_date'], x['SECUCODE'], index=0), axis=1)
+        self.stockGDF.loc[:,('price_now')] \
+                        = self.stockGDF.apply(lambda x: \
+                            self.price_after_report(x['rec_report_date'], x['SECUCODE'], index=-1), axis=1)
+        self.stockGDF.loc[:,('涨幅')] \
+                        = (self.stockGDF['price_now'] - self.stockGDF['price_report_date']) / self.stockGDF['price_report_date']
+        self.stockGDF = self.stockGDF.merge(self.basics_df()[['pe']], left_on='SECUCODE', right_index=True)
+        self.stockGDF.loc[:,('peg')] \
+                        = round(self.stockGDF['pe']/self.stockGDF['SJLTZ'],2)
 
     def research(self):
         dfs_growth      = self.dfs_growth

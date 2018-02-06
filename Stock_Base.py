@@ -5,6 +5,7 @@ import datetime
 from pathlib import Path
 import time
 import numpy as np
+import requests
 
 
 class Stock_Base():
@@ -68,6 +69,28 @@ class Stock_Base():
     def nextDay(self, date):
         tmpDate = dt.strptime(date, '%Y-%m-%d') + datetime.timedelta(days=1)
         return tmpDate.strftime('%Y-%m-%d')
+
+
+    def get_yjbb_online(self, year):
+        urlBase = 'http://dcfm.eastmoney.com//em_mutisvcexpandinterface/api/js/get?type=NBJB_YJBB_N&token=70f12f2f4f091e459a279469fe49eca5&st=NOTICEDATE&sr=-1&p=1&ps=100000&js=var%20ybkWjYRZ={pages:(tp),data:%20(x)}&filter=(REPORTDATE=^'
+        url = urlBase + str(year) + '-12-31^)'
+        html = requests.get(url)
+        reportlist = (eval('[{}]'.format(html.text.split('[')[1][:-2])))
+        reportdf = pd.DataFrame(data=reportlist, columns=reportlist[0].keys())
+        reportdf = (reportdf[reportdf.SECUCODE.str[0].isin({'0', '3', '6', '7'})])
+        return reportdf
+
+    def get_yjbb_df(self, year):
+        fileName = './data/yjbb/{year}.csv'.format(year=year)
+        file = Path(fileName)
+        if (file.exists()):
+            if(not self.update_data_or_not(file, year)):
+                reportdf = pd.read_csv(fileName, encoding='utf-8')
+                reportdf['SECUCODE'] = reportdf.apply(lambda x: '%06d' % x['SECUCODE'], axis=1)
+                return reportdf
+        reportdf = self.get_yjbb_online(year)
+        reportdf.to_csv(fileName, index=False, encoding='utf-8')
+        return reportdf
 
     def get_stock_basics(self, date):
         saveFileNameStr = './data/basics/%s.csv' % (date)
