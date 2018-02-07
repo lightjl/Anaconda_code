@@ -155,6 +155,7 @@ class MyStock(Stock_Base.Stock_Base):
         self.universe.loc[:,('nprg_ondate')] = self.universe.apply(lambda x: float(x['SJLTZ3']) if (pd.isnull(x['SJLTZ4'])) else float(x['SJLTZ4']), axis=1)
         self.universe.loc[:,('eps_ondate')] = self.universe.apply(lambda x: float(x['EPSJB3'])  if (pd.isnull(x['EPSJB4'])) else float(x['EPSJB4']), axis=1)
 
+
 if __name__ == '__main__':
     test = MyStock()
     print(test.basics_df())
