@@ -148,8 +148,7 @@ class MyStock(Stock_Base.Stock_Base):
         # 精准预测
         self.universe = \
             self.stock[['SECUCODE', 'SECUNAME3', 'rec_report_date'] + ['SJLTZ' + str(i) for i in range(5)] + ['EPSJB3', 'EPSJB4']] \
-                [
-                    (self.stock.SJLTZ1 > 25) & (self.stock.SJLTZ2 > 25) & (self.stock.SJLTZ3 > 25) & \
+                [                    (self.stock.SJLTZ1 > 25) & (self.stock.SJLTZ2 > 25) & (self.stock.SJLTZ3 > 25) & \
                     ((np.isnan(self.stock.SJLTZ4) & (self.stock.SJLTZ0 > 25)) | (~np.isnan(self.stock.SJLTZ4) & (self.stock.SJLTZ4 > 25)))
                 ]
         self.universe.loc[:,('nprg_ondate')] = self.universe.apply(lambda x: float(x['SJLTZ3']) if (pd.isnull(x['SJLTZ4'])) else float(x['SJLTZ4']), axis=1)

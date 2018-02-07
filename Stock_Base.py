@@ -58,7 +58,8 @@ class Stock_Base():
         stockJson = self.jsonForcast(code)
         for i in stockJson['Result']['yctj']['data']:
             if (i['rq'].endswith('年预测')):
-                if (i['jlr'] == '--'):
+                if (i['jlr'] == '--' or
+                    int(i['jlr'].split('家')[0]) <= 3):
                     return np.NaN
                 jlr = self.__zh2float(i['jlr'].split('(')[0])
                 #             print('预测： ' + str(jlr) + ' L: ' + str(jlrLast))
