@@ -6,13 +6,13 @@ from pathlib import Path
 import time
 import numpy as np
 import requests
-
+import json, io
 
 class Stock_Base():
     def __init__(self):
         pass
 
-    def update_data_or_not(self, fileName, year):
+    def update_data_or_not(self, file, year = dt.now().year-1):
         import os
         yearEnd = dt.now().year-1  #去年
         updateTime = 0
@@ -21,8 +21,51 @@ class Stock_Base():
         else:
             updateTime = 1
         updateTime = updateTime*24*60*60
-        finfo = fileName.stat()
+        finfo = file.stat()
         return(( time.time() - finfo.st_mtime) > updateTime)
+
+    def jsonForcast(self, code):
+        try:
+            to_unicode = unicode
+        except NameError:
+            to_unicode = str
+        urlBase = 'http://emweb.securities.eastmoney.com/PC_HSF10/ProfitForecast/ProfitForecastAjax?code='
+        shOrSz = lambda x: ('sz' + code) if code[0] in {'0', '2', '3'} else 'sh' + code
+        code = shOrSz(code)
+        saveJsonStr = './data/forcast/%s.json' % code
+        saveJson = Path(saveJsonStr)
+        if (saveJson.exists() and not self.update_data_or_not(saveJson)):  # todo 更新
+            with open(saveJsonStr, "r", encoding="utf-8") as data_file:
+                stockJson = json.load(data_file)
+        else:
+            html = requests.get(urlBase + code)
+            stockJson = json.loads(html.text)
+            saveJson.touch()
+            with io.open(saveJsonStr, 'w', encoding='utf8') as outfile:
+                str_ = json.dumps(stockJson,
+                                  indent=4, sort_keys=True,
+                                  separators=(',', ': '), ensure_ascii=False)
+                outfile.write(to_unicode(str_))
+        return stockJson
+
+    def __zh2float(self, string):
+        if ('亿' == string[-1]):
+            return float(string[:-1]) * 100000000
+        elif ('万' == string[-1]):
+            return float(string[:-1]) * 10000
+
+    def nprgForcast(self, code):
+        stockJson = self.jsonForcast(code)
+        for i in stockJson['Result']['yctj']['data']:
+            if (i['rq'].endswith('年预测')):
+                if (i['jlr'] == '--'):
+                    return np.NaN
+                jlr = self.__zh2float(i['jlr'].split('(')[0])
+                #             print('预测： ' + str(jlr) + ' L: ' + str(jlrLast))
+                nprg_forcast = round((jlr - jlrLast) / jlrLast * 100, 2)
+                break
+            jlrLast = self.__zh2float(i['jlr'].split('(')[0])
+        return nprg_forcast
 
     def get_data(self, dataType, year, q=4): #年报
         typeAll = {'profit', 'report', 'growth'}
