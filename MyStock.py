@@ -82,7 +82,7 @@ class MyStock(Stock_Base.Stock_Base):
         self.stockGDF = self.yjbbs[((np.isnan(yjbbs.SJLTZ4) & (yjbbs.SJLTZ0>25)) | (~np.isnan(yjbbs.SJLTZ4) & (yjbbs.SJLTZ4>25))) \
                                      &(yjbbs.SJLTZ1>25) &(yjbbs.SJLTZ2>25)&(yjbbs.SJLTZ3>25)] # 近4年SJLTZ净利润同比增长率>25
         self.stockGDF.loc[:,('SJLTZ')] \
-                        = self.stockGDF.apply(lambda x: x['SJLTZ3'] if pd.isnull(x['SJLTZ4']) else x['nprg4'], axis=1)
+                        = self.stockGDF.apply(lambda x: x['SJLTZ3'] if pd.isnull(x['SJLTZ4']) else x['SJLTZ4'], axis=1)
 
         self.stockGDF.loc[:,('pe_report_date')] \
                         = self.stockGDF.apply(lambda x: self.pe(x['SECUCODE'], self.nextDay(x['rec_report_date'])), axis=1)
