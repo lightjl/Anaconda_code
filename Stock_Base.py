@@ -110,6 +110,24 @@ class Stock_Base():
     def price_after_report(self, date, code, index):
         return self.price_df(date, code).iloc[index]['close']
 
+    def updatedf1y(self, enddate, path):
+        if (dt.now().strftime('%Y-%m-%d') > enddate):
+            return path.exists()
+        else:
+            return self.updateLessThanDays(path, days=1)
+
+    def price_df_1y(self, startdate, code):
+        saveFileNameStr = './data/price/%s_%s_1y.csv' % (code, startdate)
+        saveFileName = Path(saveFileNameStr)
+        nextyear = int(startdate[0:4]) + 1
+        enddate = str(nextyear) + startdate[4:]
+        if (self.updatedf1y(enddate, saveFileName) ):  # nextyear >= dt.now().year　and self.updateLessThanDays(saveFileName, days=1)
+            df = pd.read_csv(saveFileName)
+            return df
+        df = ts.get_k_data(code, ktype='D', start=startdate, end=enddate)
+        df.to_csv(saveFileNameStr, index=False, encoding='utf-8')
+        return df
+
     def nextDay(self, date):
         tmpDate = dt.strptime(date, '%Y-%m-%d') + datetime.timedelta(days=1)
         return tmpDate.strftime('%Y-%m-%d')
