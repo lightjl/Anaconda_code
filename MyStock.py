@@ -100,12 +100,21 @@ class MyStock(Stock_Base.Stock_Base):
 
         self.stockGDF.loc[:,('price_report_date')] \
                         = self.stockGDF.apply(lambda x: \
-                            self.price_after_report(x['rec_report_date'], x['SECUCODE'], index=0), axis=1)
+                            self.price_after_report_1y(x['rec_report_date'], x['SECUCODE'], index=0), axis=1)
+
         self.stockGDF.loc[:,('price_now')] \
                         = self.stockGDF.apply(lambda x: \
                             self.price_after_report(x['rec_report_date'], x['SECUCODE'], index=-1), axis=1)
-        self.stockGDF.loc[:,('涨幅')] \
-                        = (self.stockGDF['price_now'] - self.stockGDF['price_report_date']) / self.stockGDF['price_report_date']
+
+        self.stockGDF.loc[:, ('1y最大涨幅')] = \
+            self.stockGDF.apply(lambda x: round((self.price_df_1y(x['rec_report_date'], x['SECUCODE']).max()['close'] \
+                                                 - x['price_report_date']) / x['price_report_date'] * 100, 2), axis=1)
+
+        self.stockGDF.loc[:, ('hs300_zf')] = \
+            self.stockGDF.apply(lambda x: self.zf_index_close_dring('hs300', x['rec_report_date'], \
+                                                               self.price_df_1y(x['rec_report_date'], x['SECUCODE'])[
+                                                                   'date'].max()), axis=1)
+
         self.stockGDF = self.stockGDF.merge(self.basics_df()[['pe']], left_on='SECUCODE', right_index=True)
         self.stockGDF.loc[:,('peg')] \
                         = round(self.stockGDF['pe']/self.stockGDF['SJLTZ'],2)

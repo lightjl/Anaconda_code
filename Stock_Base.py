@@ -113,7 +113,7 @@ class Stock_Base():
     def updatedf1y(self, enddate, path):
         if (dt.now().strftime('%Y-%m-%d') > enddate):
             return path.exists()
-        else:
+        else:   # 小于1天则更新
             return self.updateLessThanDays(path, days=1)
 
     def price_df_1y(self, startdate, code):
@@ -127,6 +127,9 @@ class Stock_Base():
         df = ts.get_k_data(code, ktype='D', start=startdate, end=enddate)
         df.to_csv(saveFileNameStr, index=False, encoding='utf-8')
         return df
+
+    def price_after_report_1y(self, date, code, index):
+        return self.price_df_1y(date, code).iloc[index]['close']
 
     def nextDay(self, date):
         tmpDate = dt.strptime(date, '%Y-%m-%d') + datetime.timedelta(days=1)
