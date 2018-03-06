@@ -76,6 +76,12 @@ class MyStock(Stock_Base.Stock_Base):
             return np.NaN
         return self.basics_df(date).loc[code, 'pe']
 
+    def zf_index_close_dring(self, code, startdate, enddate):
+        df = self.get_index(code, enddate)
+        max_dring = df[(df.date >= startdate) & (df.date <= enddate)]['close'].max()
+        beg = df[(df.date >= startdate) & (df.date <= enddate)]['close'].values[0]
+        return round((max_dring - beg) / beg * 100, 2)
+
     def watch(self):
         #     SJLTZ  净利润	同比增长(%)
         yjbbs = self.yjbbs

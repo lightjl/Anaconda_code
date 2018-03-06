@@ -154,6 +154,22 @@ class Stock_Base():
         reportdf.to_csv(fileName, index=False, encoding='utf-8')
         return reportdf
 
+    def get_index(self, code, enddate, startdate='2010-01-01'):
+        # code = hs300
+        saveFileNameStr = './data/price/%s_%s.csv' % (code, startdate)
+        saveFileName = Path(saveFileNameStr)
+        if (saveFileName.exists()):
+            df = pd.read_csv(saveFileName)
+            if (df['date'].max() < enddate):  # 需要更新
+                dfnew = ts.get_k_data(code, start=self.nextDay(df['date'].max()))
+                if (not dfnew.empty):
+                    df = pd.concat([df, dfnew])
+                    df.to_csv(saveFileNameStr, index=False, encoding='utf-8')
+        else:
+            df = ts.get_k_data(code, start=startdate)
+            df.to_csv(saveFileNameStr, index=False, encoding='utf-8')
+        return df
+
     def get_stock_basics(self, date):
         saveFileNameStr = './data/basics/%s.csv' % (date)
         saveFileName = Path(saveFileNameStr)
