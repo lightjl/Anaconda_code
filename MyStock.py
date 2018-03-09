@@ -77,6 +77,8 @@ class MyStock(Stock_Base.Stock_Base):
         return self.basics_df(date).loc[code, 'pe']
 
     def zf_index_close_dring(self, code, startdate, enddate):
+        if (type(enddate) != str):
+            return np.nan
         df = self.get_index(code, enddate)
         max_dring = df[(df.date >= startdate) & (df.date <= enddate)]['close'].max()
         beg = df[(df.date >= startdate) & (df.date <= enddate)]['close'].values[0]

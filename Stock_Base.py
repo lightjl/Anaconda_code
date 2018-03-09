@@ -123,12 +123,16 @@ class Stock_Base():
         enddate = str(nextyear) + startdate[4:]
         if (self.updatedf1y(enddate, saveFileName) ):  # nextyear >= dt.now().year　and self.updateLessThanDays(saveFileName, days=1)
             df = pd.read_csv(saveFileName)
+            if df.empty:
+                df = pd.read_csv('./data/price/none.csv')
             return df
         df = ts.get_k_data(code, ktype='D', start=startdate, end=enddate)
         df.to_csv(saveFileNameStr, index=False, encoding='utf-8')
         return df
 
     def price_after_report_1y(self, date, code, index):
+        if self.price_df_1y(date, code).empty:
+            return np.NAN
         return self.price_df_1y(date, code).iloc[index]['close']
 
     def nextDay(self, date):
@@ -163,7 +167,7 @@ class Stock_Base():
         saveFileName = Path(saveFileNameStr)
         if (saveFileName.exists()):
             df = pd.read_csv(saveFileName)
-            if (df['date'].max() < enddate):  # 需要更新
+            if ( (not df.empty) or df['date'].max() < enddate):  # 需要更新
                 dfnew = ts.get_k_data(code, start=self.nextDay(df['date'].max()))
                 if (not dfnew.empty):
                     df = pd.concat([df, dfnew])
