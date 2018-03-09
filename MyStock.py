@@ -104,12 +104,16 @@ class MyStock(Stock_Base.Stock_Base):
                         = self.stockGDF.apply(lambda x: \
                             self.price_after_report_1y(x['rec_report_date'], x['SECUCODE'], index=0), axis=1)
 
-        self.stockGDF.loc[:,('price_now')] \
-                        = self.stockGDF.apply(lambda x: \
-                            self.price_after_report(x['rec_report_date'], x['SECUCODE'], index=-1), axis=1)
+        #self.stockGDF.loc[:,('price_now')] \
+        #                = self.stockGDF.apply(lambda x: \
+        #                    self.price_after_report(x['rec_report_date'], x['SECUCODE'], index=-1), axis=1)
 
         self.stockGDF.loc[:, ('1y最大涨幅')] = \
             self.stockGDF.apply(lambda x: round((self.price_df_1y(x['rec_report_date'], x['SECUCODE']).max()['close'] \
+                                                 - x['price_report_date']) / x['price_report_date'] * 100, 2), axis=1)
+            
+        self.stockGDF.loc[:, ('1y最大跌幅')] = \
+            self.stockGDF.apply(lambda x: round((self.price_df_1y(x['rec_report_date'], x['SECUCODE']).min()['close'] \
                                                  - x['price_report_date']) / x['price_report_date'] * 100, 2), axis=1)
 
         self.stockGDF.loc[:, ('hs300_zf')] = \
