@@ -97,8 +97,14 @@ class MyStock(Stock_Base.Stock_Base):
 
         self.stockGDF.loc[:,('eps_ondate')] = self.stockGDF.apply(lambda x: x['EPSJB3'] if (pd.isnull(x['EPSJB4'])) else x['EPSJB4'], axis=1)
 
+        #self.stockGDF.loc[:,('peg_report_date')] \
+        #                = round(self.stockGDF['pe_report_date']/self.stockGDF['SJLTZ'],2)
+        
+        self.stockGDF.loc[:, ('eps_ondate')] = self.stockGDF['eps_ondate'].astype(float)
+        
         self.stockGDF.loc[:,('peg_report_date')] \
-                        = round(self.stockGDF['pe_report_date']/self.stockGDF['SJLTZ'],2)
+                        = self.stockGDF.apply(lambda x: round(self.price_after_report_1y(x['rec_report_date'], x['SECUCODE'], 0)\
+                                                 / x['eps_ondate'] / x['SJLTZ'], 2), axis=1)
 
         self.stockGDF.loc[:,('price_report_date')] \
                         = self.stockGDF.apply(lambda x: \
