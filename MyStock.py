@@ -83,6 +83,14 @@ class MyStock(Stock_Base.Stock_Base):
         max_dring = df[(df.date >= startdate) & (df.date <= enddate)]['close'].max()
         beg = df[(df.date >= startdate) & (df.date <= enddate)]['close'].values[0]
         return round((max_dring - beg) / beg * 100, 2)
+    
+    def df_index_close_dring(self, code, startdate, enddate):
+        if (type(enddate) != str):
+            return np.nan
+        df = self.get_index(code, enddate)
+        min_dring = df[(df.date >= startdate) & (df.date <= enddate)]['close'].min()
+        beg = df[(df.date >= startdate) & (df.date <= enddate)]['close'].values[0]
+        return round((min_dring - beg) / beg * 100, 2)
 
     def watch(self):
         #     SJLTZ  净利润	同比增长(%)
@@ -124,6 +132,10 @@ class MyStock(Stock_Base.Stock_Base):
 
         self.stockGDF.loc[:, ('hs300_zf')] = \
             self.stockGDF.apply(lambda x: self.zf_index_close_dring('hs300', x['rec_report_date'], \
+                                                               self.price_df_1y(x['rec_report_date'], x['SECUCODE'])[
+                                                                   'date'].max()), axis=1)
+        self.stockGDF.loc[:, ('hs300_df')] = \
+            self.stockGDF.apply(lambda x: self.df_index_close_dring('hs300', x['rec_report_date'], \
                                                                self.price_df_1y(x['rec_report_date'], x['SECUCODE'])[
                                                                    'date'].max()), axis=1)
 
